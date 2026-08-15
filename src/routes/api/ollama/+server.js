@@ -1,124 +1,94 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 
-const execAsync = promisify(exec);
-const OLLAMA_API = 'http://localhost:11434';
+const execFileAsync = promisify(execFile);
+const OLLAMA_API = 'http://127.0.0.1:11434';
+const VALID_ACTIONS = new Set(['pull', 'delete', 'load', 'unload']);
+const MODEL_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:/@-]{0,255}$/;
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store'
+    }
+  });
+}
+
+function hasSameOrigin(request) {
+  const origin = request.headers.get('origin');
+  if (!origin) return true;
+  try {
+    return new URL(origin).origin === new URL(request.url).origin;
+  } catch {
+    return false;
+  }
+}
+
+function isValidModelName(model) {
+  return typeof model === 'string' && MODEL_NAME_PATTERN.test(model);
+}
+
+async function runOllama(args, timeout = 120000) {
+  return execFileAsync('ollama', args, {
+    timeout,
+    maxBuffer: 1024 * 1024,
+    shell: false
+  });
+}
+
+async function generate(model, keepAlive) {
+  const response = await fetch(`${OLLAMA_API}/api/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model, prompt: '', keep_alive: keepAlive }),
+    signal: AbortSignal.timeout(120000)
+  });
+
+  if (!response.ok) throw new Error(`Ollama returned HTTP ${response.status}`);
+  const reader = response.body?.getReader();
+  if (!reader) return;
+  while (true) {
+    const { done } = await reader.read();
+    if (done) break;
+  }
+}
 
 export async function POST({ request }) {
+  if (!hasSameOrigin(request)) return json({ error: 'Cross-origin requests are not allowed.' }, 403);
+
+  let body;
   try {
-    const { action, model } = await request.json();
+    body = await request.json();
+  } catch {
+    return json({ error: 'Invalid JSON body.' }, 400);
+  }
 
+  const { action, model } = body || {};
+  if (!VALID_ACTIONS.has(action)) return json({ error: 'Invalid action.' }, 400);
+  if (!isValidModelName(model)) return json({ error: 'Invalid model name.' }, 400);
+
+  try {
     if (action === 'pull') {
-      // Pull/download a new model
-      try {
-        const { stdout, stderr } = await execAsync(`ollama pull ${model}`, {
-          timeout: 600000 // 10 minute timeout
-        });
-
-        return new Response(JSON.stringify({
-          success: true,
-          message: `Model ${model} downloaded successfully`,
-          output: stdout
-        }), {
-          headers: { 'Content-Type': 'application/json' }
-        });
-      } catch (error) {
-        return new Response(JSON.stringify({
-          error: `Failed to pull model: ${error.message}`
-        }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-    } else if (action === 'delete') {
-      // Delete/remove a model
-      try {
-        const { stdout, stderr } = await execAsync(`ollama rm ${model}`);
-
-        return new Response(JSON.stringify({
-          success: true,
-          message: `Model ${model} deleted successfully`,
-          output: stdout
-        }), {
-          headers: { 'Content-Type': 'application/json' }
-        });
-      } catch (error) {
-        return new Response(JSON.stringify({
-          error: `Failed to delete model: ${error.message}`
-        }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-    } else if (action === 'load') {
-      // Load a model by making a generate request with no prompt
-      const response = await fetch(`${OLLAMA_API}/api/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: model,
-          prompt: '',
-          keep_alive: '5m'
-        })
-      });
-
-      if (!response.ok) {
-        return new Response(JSON.stringify({ error: 'Failed to load model' }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-
-      // Consume the streaming response
-      const reader = response.body.getReader();
-      while (true) {
-        const { done } = await reader.read();
-        if (done) break;
-      }
-
-      return new Response(JSON.stringify({ success: true, message: `Model ${model} loaded` }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
-    } else if (action === 'unload') {
-      // Unload a model by setting keep_alive to 0
-      const response = await fetch(`${OLLAMA_API}/api/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: model,
-          prompt: '',
-          keep_alive: 0
-        })
-      });
-
-      if (!response.ok) {
-        return new Response(JSON.stringify({ error: 'Failed to unload model' }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-
-      // Consume the streaming response
-      const reader = response.body.getReader();
-      while (true) {
-        const { done } = await reader.read();
-        if (done) break;
-      }
-
-      return new Response(JSON.stringify({ success: true, message: `Model ${model} unloaded` }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
-    } else {
-      return new Response(JSON.stringify({ error: 'Invalid action' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      await runOllama(['pull', model], 600000);
+      return json({ success: true, message: `Model ${model} downloaded successfully.` });
     }
+
+    if (action === 'delete') {
+      await runOllama(['rm', model]);
+      return json({ success: true, message: `Model ${model} deleted successfully.` });
+    }
+
+    if (action === 'load') {
+      await generate(model, '5m');
+      return json({ success: true, message: `Model ${model} loaded.` });
+    }
+
+    await generate(model, 0);
+    return json({ success: true, message: `Model ${model} unloaded.` });
   } catch (error) {
-    console.error('Ollama API error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    console.error('Ollama operation failed:', error?.code || error?.name || 'unknown error');
+    return json({ error: 'Ollama operation failed.' }, 500);
   }
 }
