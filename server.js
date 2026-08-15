@@ -1,14 +1,22 @@
 import { handler } from './build/handler.js';
 import express from 'express';
+import {
+  assertSecureRemoteConfig,
+  getServerHost,
+  getServerPort,
+  remoteAccessEnabled
+} from './src/lib/server/security.js';
+
+assertSecureRemoteConfig();
 
 const app = express();
-
-// Use SvelteKit handler (includes SSE endpoint at /api/metrics)
+app.disable('x-powered-by');
 app.use(handler);
 
-const PORT = 9000;
+const HOST = getServerHost();
+const PORT = getServerPort();
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on http://0.0.0.0:${PORT}`);
-  console.log(`SSE endpoint available at http://0.0.0.0:${PORT}/api/metrics`);
+app.listen(PORT, HOST, () => {
+  console.log(`Server running on http://${HOST}:${PORT}`);
+  console.log(`Remote access: ${remoteAccessEnabled() ? 'enabled (authentication required)' : 'disabled'}`);
 });
