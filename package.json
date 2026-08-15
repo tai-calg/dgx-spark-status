@@ -4,10 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node dev-server.js",
+    "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview --port 9000 --host 0.0.0.0",
-    "start": "node server.js"
+    "preview": "vite preview",
+    "start": "node server.js",
+    "test": "node --test tests/security.test.mjs",
+    "test:security": "node --test tests/security.test.mjs"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.5.2",
