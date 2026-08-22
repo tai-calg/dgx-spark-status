@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { subscribe, getCurrentMetrics, isWebSocketConnected } from './websocket.js';
   import Gauge from './Gauge.svelte';
+  import ProcessExplorer from './ProcessExplorer.svelte';
 
   let metrics = $state(null);
   let connected = $state(false);
@@ -222,28 +223,8 @@
       {/if}
     </div>
 
-    <!-- Row 2: Processes (compact) -->
-    {#if metrics.processes && metrics.processes.length > 0}
-      <div class="card processes-row">
-        <h2>Top Processes</h2>
-        <div class="processes-compact">
-          {#each metrics.processes.slice(0, 5) as process}
-            <div class="process-compact">
-              <div class="process-info">
-                <span class="process-name" title="{process.command}">
-                  {process.command.split(' ')[0].split('/').pop()}
-                </span>
-                <span class="process-user-compact">{process.user}</span>
-              </div>
-              <div class="process-stats">
-                <span class="process-mem-compact">{process.memoryGB} GB</span>
-                <span class="process-cpu-compact">{process.cpu}%</span>
-              </div>
-            </div>
-          {/each}
-        </div>
-      </div>
-    {/if}
+    <!-- Row 2: Searchable process explorer -->
+    <ProcessExplorer />
 
     <!-- Row 3: All Models side by side -->
     {#if metrics.inference}
