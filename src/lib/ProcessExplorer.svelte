@@ -11,9 +11,9 @@
   let userFilter = $state('all');
   let sortKey = $state('cpu');
   let sortDirection = $state('desc');
+  let fetching = $state(false);
   let timer = null;
   let abortController = null;
-  let fetching = false;
 
   let users = $derived(
     [...new Set(processes.map((process) => process.user).filter(Boolean))]
