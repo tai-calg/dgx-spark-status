@@ -1,4 +1,4 @@
-name: Hagakure primary 1074364 frames 87-90
+name: Hagakure primary 1074364 frame 91
 
 on:
   pull_request:
@@ -13,24 +13,23 @@ jobs:
   fetch:
     runs-on: ubuntu-24.04
     steps:
-      - name: Fetch NDL IIIF primary images
+      - name: Fetch NDL IIIF primary image
         shell: bash
         run: |
           set -euxo pipefail
           mkdir -p primary
-          for n in 87 88 89 90; do
-            r=$(printf 'R%07d' "$n")
-            url="https://dl.ndl.go.jp/api/iiif/1074364/${r}/full/full/0/default.jpg"
-            curl --fail --location --retry 4 --retry-delay 2 --connect-timeout 20 --max-time 180 \
-              -A 'Mozilla/5.0' "$url" -o "primary/1074364-${r}.jpg"
-            file "primary/1074364-${r}.jpg"
-            test "$(stat -c%s "primary/1074364-${r}.jpg")" -gt 10000
-          done
+          n=91
+          r=$(printf 'R%07d' "$n")
+          url="https://dl.ndl.go.jp/api/iiif/1074364/${r}/full/full/0/default.jpg"
+          curl --fail --location --retry 4 --retry-delay 2 --connect-timeout 20 --max-time 180 \
+            -A 'Mozilla/5.0' "$url" -o "primary/1074364-${r}.jpg"
+          file "primary/1074364-${r}.jpg"
+          test "$(stat -c%s "primary/1074364-${r}.jpg")" -gt 10000
           sha256sum primary/*.jpg | tee primary/SHA256SUMS.txt
-      - name: Upload primary images
+      - name: Upload primary image
         uses: actions/upload-artifact@v4
         with:
-          name: hagakure-1074364-frames-087-090
+          name: hagakure-1074364-frame-091
           path: primary/
           if-no-files-found: error
           retention-days: 1
