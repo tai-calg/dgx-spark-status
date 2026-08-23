@@ -1,4 +1,4 @@
-name: Hagakure NDL primary image fetch 287
+name: Hagakure NDL primary image fetch 287+
 
 on:
   pull_request:
@@ -16,7 +16,7 @@ jobs:
         run: |
           set -euxo pipefail
           mkdir -p primary
-          for n in 101 102; do
+          for n in $(seq 103 110); do
             r=$(printf 'R%07d' "$n")
             url="https://dl.ndl.go.jp/api/iiif/1074362/${r}/full/full/0/default.jpg"
             curl --fail --location --retry 4 --retry-delay 2 --connect-timeout 20 --max-time 180 \
@@ -28,7 +28,7 @@ jobs:
       - name: Upload primary images
         uses: actions/upload-artifact@v4
         with:
-          name: hagakure-1074362-frames-101-102
+          name: hagakure-1074362-frames-103-110
           path: primary/
           if-no-files-found: error
           retention-days: 1
