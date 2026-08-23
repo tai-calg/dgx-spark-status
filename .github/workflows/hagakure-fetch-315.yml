@@ -1,4 +1,4 @@
-name: Hagakure primary 1074364 frames 92-95
+name: Hagakure primary 1074364 frames 96-98
 
 on:
   pull_request:
@@ -18,7 +18,7 @@ jobs:
         run: |
           set -euxo pipefail
           mkdir -p primary
-          for n in 92 93 94 95; do
+          for n in 96 97 98; do
             r=$(printf 'R%07d' "$n")
             url="https://dl.ndl.go.jp/api/iiif/1074364/${r}/full/full/0/default.jpg"
             curl --fail --location --retry 4 --retry-delay 2 --connect-timeout 20 --max-time 180 \
@@ -30,7 +30,7 @@ jobs:
       - name: Upload primary images
         uses: actions/upload-artifact@v4
         with:
-          name: hagakure-1074364-frames-092-095
+          name: hagakure-1074364-frames-096-098
           path: primary/
           if-no-files-found: error
           retention-days: 1
