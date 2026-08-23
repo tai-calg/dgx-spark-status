@@ -1,0 +1,34 @@
+name: Hagakure NDL primary image fetch 287+
+
+on:
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Fetch NDL IIIF primary images
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p primary
+          for n in $(seq 103 110); do
+            r=$(printf 'R%07d' "$n")
+            url="https://dl.ndl.go.jp/api/iiif/1074362/${r}/full/full/0/default.jpg"
+            curl --fail --location --retry 4 --retry-delay 2 --connect-timeout 20 --max-time 180 \
+              -A 'Mozilla/5.0' "$url" -o "primary/1074362-${r}.jpg"
+            file "primary/1074362-${r}.jpg"
+            test "$(stat -c%s "primary/1074362-${r}.jpg")" -gt 10000
+          done
+          sha256sum primary/*.jpg | tee primary/SHA256SUMS.txt
+      - name: Upload primary images
+        uses: actions/upload-artifact@v4
+        with:
+          name: hagakure-1074362-frames-103-110
+          path: primary/
+          if-no-files-found: error
+          retention-days: 1
