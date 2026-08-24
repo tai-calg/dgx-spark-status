@@ -27,7 +27,7 @@ jobs:
           curl -fL --retry 5 --retry-delay 2 "$base/NDL1074364_%E8%91%89%E9%9A%A0_%E4%B8%8B_part1.pdf" -o facsimile/NDL1074364_hagakure_lower_part1.pdf
           curl -fL --retry 5 --retry-delay 2 "$base/NDL1074364_%E8%91%89%E9%9A%A0_%E4%B8%8B_part2.pdf" -o facsimile/NDL1074364_hagakure_lower_part2.pdf
           sha256sum facsimile/*.pdf | tee facsimile/SHA256SUMS.txt
-          for f in facsimile/*.pdf; do pdfinfo "$f" | grep -E '^(Pages|Encrypted|Page size):' | sed "s|^|$(basename "$f") |"; done | tee facsimile/PDFINFO.txt
+          ls -lh facsimile/*.pdf | tee facsimile/FILES.txt
       - name: Upload facsimiles
         uses: actions/upload-artifact@v4
         with:
